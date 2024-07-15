@@ -844,13 +844,13 @@ app.get('/books/:bookID/:userID/reaction', async (req, res) => {
 
 
 app.post('/api/favorite', async (req, res) => {
-  const { userId, bookId } = req.body;
+  const { userID, book } = req.body;
   const query = 'INSERT INTO favorite(usersID, bookID) VALUES (?, ?)';
-  
+  console.log(req.body);
   let conn;
   try {
       conn = await pool.getConnection();
-      await conn.query(query, [userId, bookId]);
+      await conn.query(query, [userID, book]);
       res.status(201).json({ message: 'Book added to favorites' });
   } catch (err) {
       console.error(err);
@@ -859,6 +859,34 @@ app.post('/api/favorite', async (req, res) => {
       if (conn) conn.release();
   }
 });
+
+
+
+
+
+
+app.delete('/api/favorite', async (req, res) => {
+  const { userID, book } = req.body;
+  const query = 'DELETE FROM favorite WHERE usersID = ? AND bookID = ?';
+  console.log(req.body);
+  let conn;
+  try {
+      conn = await pool.getConnection();
+      const result = await conn.query(query, [userID, book]);
+      if (result.affectedRows === 0) {
+          return res.status(404).json({ message: 'Favorite not found' });
+      }
+      res.status(200).json({ message: 'Book removed from favorites' });
+  } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Failed to remove favorite' });
+  } finally {
+      if (conn) conn.release();
+  }
+});
+
+
+
 
 
 
