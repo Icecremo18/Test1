@@ -12,11 +12,10 @@ import {
 } from '@mui/material';
 import axios from 'axios';
 import Swal from 'sweetalert2';
-import {jwtDecode} from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode';
 import ThumbUpIcon from '@mui/icons-material/ThumbUp';
 import ThumbDownAltIcon from '@mui/icons-material/ThumbDownAlt';
-
-
+import AddCircleIcon from '@mui/icons-material/AddCircle';
 
 function Book() {
   const [books, setBooks] = useState([]);
@@ -195,78 +194,153 @@ function Book() {
   };
 
 
+  const Favorite_Button = ({ book }) => {
+    const [isFavorited, setIsFavorited] = useState(false);
+  
+    useEffect(() => {
+      const checkFavoriteStatus = async () => {
+        try {
+          const token = localStorage.getItem('token');
+          if (!token) {
+            console.error('No token found');
+            return;
+          }
+          const decodedToken = jwtDecode(token);
+          const userID = decodedToken.ID;
+          const response = await axios.get(`/api/favorites/${userID}`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          const favorites = response.data;
+          setIsFavorited(favorites.some(favorite => favorite.bookID === book.bookID));
+        } catch (error) {
+          console.error('Failed to fetch favorite status', error);
+        }
+      };
+      checkFavoriteStatus();
+    }, [book.bookID]);
+  
+    const toggleFavorite = async () => {
+      const token = localStorage.getItem('token');
+  
+      if (!token) {
+        console.error('No token found');
+        return;
+      }
+  
+      const decodedToken = jwtDecode(token);
+      const userID = decodedToken.ID;
+  
+      try {
+        if (isFavorited) {
+          // Remove from favorites
+          await axios.delete('http://localhost:3333/api/favorite', {
+            data: { userID, book },
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+        } else {
+          // Add to favorites
+          await axios.post('http://localhost:3333/api/favorite', {
+            userID,
+            book,
+          }, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            }
+          });
+        }
+        setIsFavorited(!isFavorited);
+      } catch (error) {
+        console.error('Failed to update favorite status:', error);
+      }
+    };
+  
+    return (
+      <Button
+        variant="contained"
+        color={isFavorited ? "secondary" : "primary"}
+        startIcon={<AddCircleIcon />}
+        onClick={toggleFavorite}
+      >
+        {isFavorited ? 'Remove from Favorites' : 'Add to Favorites'}
+      </Button>
+    );
+  };
 
 
 
-  return (
-    <Container sx={{ py: 8 }} maxWidth="md">
-      <Grid container spacing={4}>
-        {books.map((book) => (
-          <Grid item key={book.bookID} xs={12} sm={6} md={4}>
-            <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', border: '5px solid #FF0000' }}>
-              <CardMedia
-                component="div"
-                sx={{ pt: '0%' }}
-              >
-                <img
-                  alt={book.name}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  src={book.cover_image}
-                />
-              </CardMedia>
-              <Avatar
-                src={book.profile ? `/${book.profile}` : ''}
-                sx={{ width: 70, height: 70, mb: 2, mx: 'auto', marginTop: '15px' }}
-              >
-                H
-              </Avatar>
-              
 
-              <CardContent sx={{ flexGrow: 1 }}>
-              {/* <Favorite_Button></Favorite_Button> */}
-                <Typography gutterBottom variant="h5" component="h2" sx={{ fontWeight: 'bold' }}>
-                  {book.name}
-                </Typography>
-                <Typography sx={{ fontWeight: 'bold' }}>
-                  Author: {book.write}
-                </Typography>
-                <Typography>
-                  Publisher: {book.publish}
-                </Typography>
-                <Typography>
-                  Synopsis: {book.detail}...
-                </Typography>
-              </CardContent>
-              <CardActions>
-                <Button
-                  size="small"
-                  onClick={() => displayPdfFromId(book.PDF)}
-                  style={{ color: 'white', backgroundColor: '#2196F3' }}
+    return (
+      <Container sx={{ py: 8 }} maxWidth="md">
+        <Grid container spacing={4}>
+          {books.map((book) => (
+            <Grid item key={book.bookID} xs={12} sm={6} md={4}>
+              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', border: '5px solid #FF0000' }}>
+                <CardMedia
+                  component="div"
+                  sx={{ pt: '0%' }}
                 >
-                  Read
-                </Button>
-                <Button
-                  size="small"
-                  onClick={() => handleDelete(book.bookID)}
-                  style={{ color: 'white', backgroundColor: 'red' }}
+                  <img
+                    alt={book.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    src={book.cover_image}
+                  />
+                </CardMedia>
+                <Avatar
+                  src={book.profile ? `/${book.profile}` : ''}
+                  sx={{ width: 70, height: 70, mb: 2, mx: 'auto', marginTop: '15px' }}
                 >
-                  DELETE
-                </Button>
-              </CardActions>
-              <CardActions>
-                <Button onClick={() => handleReaction(book.bookID, 'like')} style={{ color: book.like ? 'blue' : 'inherit', backgroundColor: book.like ? '#2196F3' : 'inherit' }}>
-                  <ThumbUpIcon /> Like
-                </Button>
-                <Button onClick={() => handleReaction(book.bookID, 'dislike')} style={{ color: book.dislike ? 'blue' : 'inherit', backgroundColor: book.dislike ? '#FF0000' : 'inherit' }}>
-                  <ThumbDownAltIcon /> Dislike
-                </Button>
-              </CardActions>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-    </Container>
-  );
-}
+                  H
+                </Avatar>
 
-export default Book;
+                <CardContent sx={{ flexGrow: 1 }}>
+                  <Favorite_Button  book={book.bookID}></Favorite_Button>
+                  <Typography gutterBottom variant="h5" component="h2" sx={{ fontWeight: 'bold' }}>
+                    {book.name}
+                  </Typography>
+                  <Typography sx={{ fontWeight: 'bold' }}>
+                    Author: {book.write}
+                  </Typography>
+                  <Typography>
+                    Publisher: {book.publish}
+                  </Typography>
+                  <Typography>
+                    Synopsis: {book.detail}...
+                  </Typography>
+                </CardContent>
+                <CardActions>
+                  <Button
+                    size="small"
+                    onClick={() => displayPdfFromId(book.PDF)}
+                    style={{ color: 'white', backgroundColor: '#2196F3' }}
+                  >
+                    Read
+                  </Button>
+                  <Button
+                    size="small"
+                    onClick={() => handleDelete(book.bookID)}
+                    style={{ color: 'white', backgroundColor: 'red' }}
+                  >
+                    DELETE
+                  </Button>
+                </CardActions>
+                <CardActions>
+                  <Button onClick={() => handleReaction(book.bookID, 'like')} style={{ color: book.like ? 'blue' : 'inherit', backgroundColor: book.like ? '#2196F3' : 'inherit' }}>
+                    <ThumbUpIcon /> Like
+                  </Button>
+                  <Button onClick={() => handleReaction(book.bookID, 'dislike')} style={{ color: book.dislike ? 'blue' : 'inherit', backgroundColor: book.dislike ? '#FF0000' : 'inherit' }}>
+                    <ThumbDownAltIcon /> Dislike
+                  </Button>
+                </CardActions>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      </Container>
+    );
+  }
+
+  export default Book;
