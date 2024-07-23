@@ -8,17 +8,34 @@ const path = require("path");
 const fs = require("fs");
 const { v4: uuidv4 } = require("uuid");
 const mysql = require("mysql2/promise");
-
+const helmet = require('helmet');
 const app = express();
 const saltRounds = 10;
+const crypto = require('crypto');
+const nodemailer = require("nodemailer");
 const secret = "login-api";
 const corsOptions = {
   origin: "http://localhost:3000", // หรือโดเมนที่คุณใช้รัน React
   origin: ['http://localhost:3002'], // เพิ่ม origin ที่คุณต้องการอนุญาต
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  methods: ['GET', 'POST', 'PUT', 'DELETE','PATCH'],
   credentials: true,
   optionsSuccessStatus: 200,
 };
+app.use(helmet());
+app.use(helmet.noSniff());
+app.use(helmet.contentSecurityPolicy({
+  directives: {
+    defaultSrc: ["'self'"], // อนุญาตให้โหลดทรัพยากรจากต้นทางเดียวกัน
+    scriptSrc: ["'self'", "https://trusted.cdn.com"], // อนุญาตให้โหลดสคริปต์จากต้นทางเดียวกันและ CDN ที่เชื่อถือได้
+    styleSrc: ["'self'", "https://trusted.cdn.com"], // อนุญาตให้โหลดสไตล์จากต้นทางเดียวกันและ CDN ที่เชื่อถือได้
+    imgSrc: ["'self'", "data:"], // อนุญาตให้โหลดภาพจากต้นทางเดียวกันและ data URIs
+    frameAncestors: ["'none'"], // ป้องกันการฝังเนื้อหา
+    formAction: ["'self'"], // อนุญาตให้ส่งฟอร์มไปยังโดเมนเดียวกัน
+    connectSrc: ["'self'", "https://api.trusted.com"] // อนุญาตให้เชื่อมต่อไปยังต้นทางเดียวกันและ API ที่เชื่อถือได้
+  }
+}));
+app.use(helmet.frameguard({ action: 'sameorigin' }));
+
 
 app.use(cors(corsOptions));
 app.use(bodyParser.json());
@@ -42,6 +59,11 @@ const uploadDir = path.join(
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
+
+
+
+
+
 
 // กำหนดการบันทึกไฟล์โปรไฟล์ด้วย Multer
 const storageprofile = multer.diskStorage({
@@ -140,8 +162,8 @@ const uploadMiddleware = upload.fields([
 app.get("/books", async (req, res) => {
   try {
     const [results] = await pool.query(
-      "SELECT book.*, users.profile as userProfile, CONVERT(PDF USING utf8) as pdf FROM book JOIN users ON book.userupload = users.ID ORDER BY book.name ASC"
-    );
+      "SELECT book.*, users.profile as userProfile, CONVERT(PDF USING utf8) as pdf , users.First_name,categorybook.categoryname FROM book JOIN users ON book.userupload = users.ID JOIN  categorybook ON book.typing = categorybook.categoryID ORDER BY book.name ASC"
+);
     const formattedResults = results.map((result) => ({
       ...result,
       userProfile: result.userProfile
@@ -547,7 +569,7 @@ app.get("/get_img_mybook/:id", async (req, res) => {
 
   try {
     const [results] = await pool.query(
-      `SELECT profile
+      `SELECT *
    FROM users
    INNER JOIN book ON users.ID = book.userupload
    WHERE book.userupload = ?`,
@@ -805,6 +827,8 @@ app.get('/reactions/:userID', async (req, res) => {
   try {
     const conn = await pool.getConnection();
     const [rows] = await conn.query('SELECT * FROM reactions WHERE userID = ?', [userID]);
+   
+
     conn.release();
     res.status(200).json(rows);
   } catch (error) {
@@ -819,10 +843,11 @@ app.get('/reactions/:userID', async (req, res) => {
 app.get('/books/:bookID/:userID/reaction', async (req, res) => {
   const { bookID, userID } = req.params;
 
+  let conn;
   try {
-    const conn = await pool.getConnection();
+    conn = await pool.getConnection();
     const [rows] = await conn.query(
-      'SELECT reaction FROM reactions WHERE bookID = ? AND userID = ?',
+      'SELECT reactions.reaction, users.First_name FROM reactions JOIN users ON users.ID = reactions.userID WHERE bookID = ? AND userID = ?',
       [bookID, userID]
     );
     conn.release();
@@ -843,22 +868,61 @@ app.get('/books/:bookID/:userID/reaction', async (req, res) => {
 
 
 
-app.post('/api/favorite', async (req, res) => {
-  const { userID, book } = req.body;
-  const query = 'INSERT INTO favorite(usersID, bookID) VALUES (?, ?)';
-  console.log(req.body);
+
+app.post('/api/favorite/:book', async (req, res) => {
+  const { userID, } = req.body;
+  const book = req.params.book;
+  const checkQuery = 'SELECT * FROM favorite WHERE usersID = ? AND bookID = ?';
+  console.log(req.body,book);
+  
   let conn;
   try {
-      conn = await pool.getConnection();
-      await conn.query(query, [userID, book]);
-      res.status(201).json({ message: 'Book added to favorites' });
+    conn = await pool.getConnection();
+    
+    // ตรวจสอบว่ามีรายการโปรดอยู่แล้วหรือไม่
+    const [existingFavorite] = await conn.query(checkQuery, [userID, book]);
+
+    if (existingFavorite.length > 0) {
+      return res.status(400).json({ message: 'Book is already favorited' });
+    }
+
+    const insertQuery = 'INSERT INTO favorite(usersID, bookID) VALUES (?, ?)';
+    await conn.query(insertQuery, [userID, book]); // แก้ไขที่นี่
+    res.status(201).json({ message: 'Book added to favorites' });
   } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: 'Failed to add favorite' });
+    console.error(err);
+    res.status(500).json({ error: 'Failed to add favorite' });
   } finally {
-      if (conn) conn.release();
+    if (conn) conn.release(); // แก้ไขที่นี่
   }
 });
+
+
+
+app.get("/api/favorites/:userID", async (req, res) => {
+  const userID = req.params.userID; // ใช้ req.query แทน req.body สำหรับ GET
+  const query = `
+    SELECT favorite.*, book.cover_image ,book.name,book.PDF
+    FROM favorite 
+    JOIN book ON book.bookID = favorite.bookID 
+    WHERE favorite.usersID = ?
+  `;
+  
+  let conn; // ประกาศ conn ที่นี่
+  try {
+    conn = await pool.getConnection();
+    const [favorites] = await conn.query(query, [userID]);
+    
+    res.status(200).json(favorites); // ส่งผลลัพธ์กลับไป
+  } catch (err) {
+    console.log("status 500", err);
+    res.status(500).json({ error: 'Failed to fetch favorite books' });
+  } finally {
+    if (conn) conn.release(); // ปล่อยการเชื่อมต่อ
+  }
+});
+
+
 
 
 
@@ -884,6 +948,210 @@ app.delete('/api/favorite', async (req, res) => {
       if (conn) conn.release();
   }
 });
+
+
+
+
+app.get('/books/:bookID/like-count', async (req, res) => {
+  const { bookID } = req.params;
+
+  try {
+    const conn = await pool.getConnection();
+    const [result] = await conn.query(
+      'SELECT COUNT(*) AS likeCount FROM reactions WHERE bookID = ? AND reaction = "like"',
+      [bookID]
+    );
+    
+    conn.release();
+
+    res.status(200).json({ likeCount: result[0].likeCount });
+  } catch (error) {
+    console.error('Error fetching like count:', error);
+    res.status(500).json({ message: 'Failed to fetch like count' });
+  }
+});
+
+
+
+
+
+
+
+
+
+
+app.get('/res/:userID', async (req, res) => {
+  const { userID } = req.params;
+
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const [rows] = await conn.query(
+      "SELECT * FROM users INNER JOIN book ON users.ID = book.userupload WHERE book.userupload = ?",
+      [userID]
+    );
+    res.status(200).json(rows);
+  } catch (error) {
+    console.error('Error fetching reactions:', error);
+    res.status(500).json({ message: 'Failed to fetch reactions' });
+  } finally {
+    if (conn) conn.release();
+  }
+});
+
+
+
+
+
+
+
+// API endpoint for searching books by name
+app.get('/search', async (req, res) => {
+  const { name } = req.query;
+
+  try {
+    const conn = await pool.getConnection();
+    const query = 'SELECT * FROM book WHERE name LIKE ?';
+    const [rows] = await conn.query(query, [`%${name}%`]);
+
+    conn.release();
+    res.status(200).json(rows);
+  } catch (error) {
+    console.error('Error fetching books:', error);
+    res.status(500).json({ message: 'Failed to fetch books' });
+  }
+});
+
+
+const generateOtp = () => {
+  // Generate a 6-digit OTP
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+
+
+
+
+// Configure your email transport
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: 'aom2inter@gmail.com',
+    pass: 'dugc hmrn ouvb ided'
+  }
+});
+
+let otpStore = {}; // Temporary in-memory storage for OTPs
+
+app.post('/reset-password-request', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    // ตรวจสอบความถูกต้องของอีเมล
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    // สร้าง OTP และ token
+    const otp = generateOtp(); // ฟังก์ชันสำหรับสร้าง OTP
+    otpStore[email] = otp; // เก็บ OTP ชั่วคราว
+
+    const token = jwt.sign({ email }, 'your-jwt-secret', { expiresIn: '15m' });
+
+    const mailOptions = {
+      from: 'your-email@gmail.com',
+      to: email,
+      subject: 'Reset Password',
+      text: `Your OTP is ${otp}. Click here to reset your password: http://localhost:3002/OTP?token=${token}`
+    };
+    
+
+    await transporter.sendMail(mailOptions);
+
+    res.status(200).json({ message: 'OTP sent to your email' });
+  } catch (error) {
+    console.error('Error sending reset password email:', error);
+    res.status(500).json({ error: 'Internal Server Error', details: error.message });
+  }
+});
+
+
+
+app.post('/verify-otp', async (req, res) => {
+  try {
+    const { token, otp, password } = req.body;
+
+    // ตรวจสอบ token
+    jwt.verify(token, 'your-jwt-secret', async (err, decoded) => {
+      if (err) {
+        return res.status(400).json({ error: 'Invalid or expired token' });
+      }
+
+      const email = decoded.email;
+
+      // ตรวจสอบ OTP
+      if (otp !== otpStore[email]) {
+        return res.status(400).json({ error: 'Invalid OTP' });
+      }
+
+      // เชื่อมต่อฐานข้อมูลและอัปเดตรหัสผ่าน
+      try {
+        const conn = await pool.getConnection();
+
+        // แฮชรหัสผ่าน
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const query = "UPDATE users SET password = ? WHERE email = ?";
+        const [result] = await conn.query(query, [hashedPassword, email]);
+
+        conn.release();
+
+        // ลบ OTP หลังจากใช้แล้ว
+        delete otpStore[email];
+        res.status(200).json({ message: 'Password updated successfully' });
+      } catch (dbError) {
+        console.error('Database error:', dbError);
+        res.status(500).json({ error: 'Database error', details: dbError.message });
+      }
+    });
+  } catch (error) {
+    console.error('Error verifying OTP:', error);
+    res.status(500).json({ error: 'Internal Server Error', details: error.message });
+  }
+});
+
+app.post('/set-new-password', async (req, res) => {
+  const { token, password } = req.body;
+
+  jwt.verify(token, 'your-jwt-secret', async (err, decoded) => {
+    if (err) {
+      return res.status(400).json({ error: 'Invalid or expired token' });
+    }
+
+    const email = decoded.email;
+
+    try {
+      // Hash the password before storing it
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Update the user's password in the database
+      conn.query('UPDATE users SET password = ? WHERE email = ?', [hashedPassword, email], (error, results) => {
+        if (error) {
+          console.error('Database error:', error);
+          return res.status(500).json({ error: 'Database error' });
+        }
+        if (results.affectedRows === 0) {
+          return res.status(400).json({ error: 'User not found' });
+        }
+        res.status(200).json({ message: 'Password updated successfully' });
+      });
+    } catch (error) {
+      console.error('Error hashing password:', error);
+      res.status(500).json({ error: 'Error hashing password' });
+    }
+  });
+});
+
 
 
 
