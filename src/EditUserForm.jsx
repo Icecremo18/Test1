@@ -9,6 +9,7 @@ import axios from 'axios';
 import Avatar from "@mui/material/Avatar";
 import { styled } from '@mui/material/styles';
 import AccountBoxIcon from '@mui/icons-material/AccountBox';
+import { Box } from '@mui/material';
 
 function EditProfilePopup({ open, onClose, userId }) {
     const [user, setUser] = useState({ First_name: '', Last_name: '', email: '', phone: '' });
@@ -99,6 +100,7 @@ function EditProfilePopup({ open, onClose, userId }) {
 
     return (
         <Dialog open={open} onClose={onClose}>
+            <Box sx={{ backgroundColor: "#f5f5dc" }} >
             <DialogTitle>Edit Profile</DialogTitle>
             <DialogContent sx={{ textAlign: 'center' }}>
             <Avatar
@@ -158,6 +160,7 @@ function EditProfilePopup({ open, onClose, userId }) {
                 <Button onClick={onClose}>Cancel</Button>
                 <Button onClick={handleSave}>Save</Button>
             </DialogActions>
+            </Box>
         </Dialog>
     );
 }

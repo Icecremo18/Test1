@@ -17,6 +17,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import Swal from 'sweetalert2';
 import { jwtDecode as jwt_decode } from 'jwt-decode';
 import './index.css';
+import { Box } from '@mui/material';
 
 const EditMember = ({ open, onClose }) => {
   const [users, setUsers] = useState([]);
@@ -123,10 +124,11 @@ const EditMember = ({ open, onClose }) => {
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+      <Box sx={{backgroundColor:'#f5f5dc'}} >
       <DialogTitle>Edit Member</DialogTitle>
-      <DialogContent>
+      <DialogContent   >
         {/* <Button onClick={handleRefresh} endIcon={<RefreshIcon />} sx={{alignItems :'center'}}  >Refresh</Button> */}
-        <TableContainer component={Paper}>
+        <TableContainer component={Paper}   sx={{backgroundColor:'#f5f5dc'}}>
           <Table>
             <TableHead>
               <TableRow>
@@ -179,6 +181,7 @@ const EditMember = ({ open, onClose }) => {
           userId={selectedUserId}
         />
       )}
+      </Box>
     </Dialog>
   );
 };

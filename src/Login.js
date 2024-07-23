@@ -15,7 +15,6 @@ import { createTheme, ThemeProvider } from '@mui/material/styles';
 import backgroundImage from './assets/images/backgroundImage.webp';
 import Swal from 'sweetalert2';
 
-
 function Copyright(props) {
   return (
     <Typography variant="body2" color="text.secondary" align="center" {...props}>
@@ -29,8 +28,6 @@ function Copyright(props) {
   );
 }
 
-// TODO remove, this demo shouldn't need to reset the theme.
-
 const defaultTheme = createTheme();
 
 export default function SignInSide() {
@@ -41,7 +38,7 @@ export default function SignInSide() {
       username: data.get('username'),
       password: data.get('password'),
     };
-  
+
     fetch('http://localhost:3333/login', {
       method: 'POST',
       headers: {
@@ -72,6 +69,7 @@ export default function SignInSide() {
         console.error('Error:', error);
       });
   };
+
   return (
     <ThemeProvider theme={defaultTheme}>
       <Grid container component="main" sx={{ height: '100vh' }}>
@@ -82,20 +80,18 @@ export default function SignInSide() {
           sm={4}
           md={7}
           sx={{
-            backgroundImage: `url(${backgroundImage})`, 
+            backgroundImage: `url(${backgroundImage})`,
             backgroundRepeat: 'no-repeat',
             backgroundColor: (t) =>
               t.palette.mode === 'light' ? t.palette.grey[50] : t.palette.grey[900],
             backgroundSize: 'cover',
             backgroundPosition: 'center',
           }}
-          />
-        <Grid item xs={12} sm={8} md={5} component={Paper} elevation={6} square   sx={{backgroundColor:'#F4A460',}}>
-            
+        />
+        <Grid item xs={12} sm={8} md={5} component={Paper} elevation={6} square sx={{ backgroundColor: '#F4A460' }}>
           <Box
-
             sx={{
-              backgroundColor:'#F5DEB3',
+              backgroundColor: '#F5DEB3',
               my: 8,
               mx: 5,
               display: 'flex',
@@ -103,9 +99,6 @@ export default function SignInSide() {
               alignItems: 'center',
               borderRadius: '20px',
               border: '5px solid #FF0000'
-              
-              
-
             }}
           >
             <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
@@ -115,7 +108,7 @@ export default function SignInSide() {
               Sign in
             </Typography>
             <Box component="form" noValidate onSubmit={handleSubmit} sx={{ mt: 1 }}>
-            <TextField
+              <TextField
                 margin="normal"
                 required
                 fullWidth
@@ -149,7 +142,9 @@ export default function SignInSide() {
               </Button>
               <Grid container>
                 <Grid item xs>
-                  
+                  <Link href="/reset-password-request" variant="body2">
+                    Forgot your password?
+                  </Link>
                 </Grid>
                 <Grid item>
                   <Link href="/register" variant="body2">

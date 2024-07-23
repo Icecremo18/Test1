@@ -13,9 +13,9 @@ import Book from './book'
 import EditMember from './EditMember';
 import EditUserForm from './EditUserForm';
 import EditProfilePopupe from './EditProfilePopup';
-
-
-
+import ResetPasswordRequest from './Resetpasword';
+import ResetPassword from './ืNewpasword';
+import OTPInput from './OTPInput';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
@@ -32,8 +32,9 @@ root.render(
       <Route path="/EditMember" element={<EditMember/>}/>
       <Route path="/EditUserForm" element={<EditUserForm/>}/>
       <Route path = "/UserProfile"  element = {<EditProfilePopupe/>} />
-      
-      
+      <Route path="/reset-password-request"   element ={<ResetPasswordRequest/>} />
+      <Route path="/reset-password/:token" element ={<ResetPassword/>} />
+      <Route path="/OTP" element={<OTPInput />} />
     </Routes>
   </BrowserRouter>
 );

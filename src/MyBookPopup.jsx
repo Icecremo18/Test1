@@ -16,6 +16,7 @@ import axios from 'axios';
 import { jwtDecode } from "jwt-decode";
 import Editmybook from './editmybook';
 import Swal from 'sweetalert2';
+import { Box } from '@mui/material';
 
 const MyBookPopup = ({ open, handleClose }) => {
     const [books, setBooks] = useState([]);
@@ -92,7 +93,7 @@ const MyBookPopup = ({ open, handleClose }) => {
                 if (IDuser) {
                     const response = await axios.get(`http://localhost:3333/mybooksuser/${IDuser}`);
                     setBooks(response.data);
-                    console.log(response.data);
+                    
                 }
             }
         } catch (error) {
@@ -118,9 +119,10 @@ const MyBookPopup = ({ open, handleClose }) => {
 
     return (
         <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
+            <Box sx={{backgroundColor: '#f5f5dc'}}  >
             <DialogTitle>MY BOOK</DialogTitle>
-            <DialogContent>
-                <TableContainer component={Paper}>
+            <DialogContent    >
+                <TableContainer component={Paper}   sx={{backgroundColor: '#f5f5dc'}} >
                     <Table>
                         <TableHead>
                             <TableRow>
@@ -156,15 +158,14 @@ const MyBookPopup = ({ open, handleClose }) => {
                 <Button onClick={handleClose} color="primary">
                     Close
                 </Button>
-                <Button onClick={handleClose} color="primary" variant="contained">
-                    Add <AddTwoToneIcon />
-                </Button>
+                
             </DialogActions>
             <Editmybook
                 open={booksopen}
                 onClose={handleCloseEdit}
                 book={selectedBook}
             />
+            </Box>
         </Dialog>
     );
 };

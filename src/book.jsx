@@ -8,17 +8,31 @@ import {
   Grid,
   Typography,
   Container,
-  Avatar
+  Avatar,
+  TextField,
+  CircularProgress,
+  Box,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import { jwtDecode } from 'jwt-decode';
 import ThumbUpIcon from '@mui/icons-material/ThumbUp';
 import ThumbDownAltIcon from '@mui/icons-material/ThumbDownAlt';
-import AddCircleIcon from '@mui/icons-material/AddCircle';
+import Pagination from '@mui/material/Pagination';
+import PaginationItem from '@mui/material/PaginationItem';
+import Stack from '@mui/material/Stack';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 
 function Book() {
   const [books, setBooks] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [filteredBooks, setFilteredBooks] = useState([]);
 
   const fetchBooks = useCallback(async () => {
     try {
@@ -28,7 +42,6 @@ function Book() {
           const profileResponse = await axios.get(`http://localhost:3333/get_img_mybook/${book.userupload}`);
           const profilePath = profileResponse.data.replace('C:\\Users\\Cite\\Downloads\\โปรเจ็คท้าย\\myapp\\react-login\\public\\', '');
 
-          // Fetch the current reaction for each book
           const reactionResponse = await axios.get(`http://localhost:3333/books/${book.bookID}/${book.userupload}/reaction`);
           const reaction = reactionResponse.data.reaction;
 
@@ -52,6 +65,17 @@ function Book() {
   useEffect(() => {
     fetchBooks();
   }, [fetchBooks]);
+
+  useEffect(() => {
+    const results = books.filter(
+      (book) =>
+        book.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+        (selectedCategory === 'All' || book.categoryname === selectedCategory)
+    );
+    setFilteredBooks(results);
+    setCurrentPage(1); // Reset to first page on search or category change
+  }, [searchTerm, selectedCategory, books]);
+  
 
   const handleDelete = useCallback(async (id) => {
     const token = localStorage.getItem("token");
@@ -81,22 +105,13 @@ function Book() {
         });
 
         if (result.isConfirmed) {
-          try {
-            await axios.delete(`http://localhost:3333/booksdelete/${id}`);
-            await fetchBooks();
-            Swal.fire({
-              title: "Deleted!",
-              text: "Your book has been deleted.",
-              icon: "success"
-            });
-          } catch (error) {
-            console.error('Error deleting book:', error);
-            Swal.fire({
-              title: "Error",
-              text: "เกิดข้อผิดพลาดในการลบหนังสือ",
-              icon: "error"
-            });
-          }
+          await axios.delete(`http://localhost:3333/booksdelete/${id}`);
+          await fetchBooks();
+          Swal.fire({
+            title: "Deleted!",
+            text: "Your book has been deleted.",
+            icon: "success"
+          });
         }
       } else {
         Swal.fire({
@@ -122,225 +137,284 @@ function Book() {
     window.open(url, '_blank');
   }, []);
 
-  const handleReaction = async (bookID, reaction) => {
-    try {
+  const BookReactions = ({ book }) => {
+    const [userReactions, setUserReactions] = useState({ like: false, dislike: false });
+    const [likeCount, setLikeCount] = useState(0);
+
+    useEffect(() => {
+      const fetchLikeCount = async () => {
+        try {
+          const response = await axios.get(`http://localhost:3333/books/${book}/like-count`);
+          setLikeCount(response.data.likeCount);
+        } catch (error) {
+          console.error('Error fetching like count:', error);
+        }
+      };
+      fetchLikeCount();
+    }, [book]);
+
+    useEffect(() => {
+      const fetchUserReactions = async () => {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const decodedToken = jwtDecode(token);
+        const userID = decodedToken.ID;
+
+        try {
+          const response = await axios.get(`http://localhost:3333/reactions/${userID}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+
+          const userReaction = response.data.find(reaction => reaction.bookID === book);
+          if (userReaction) {
+            setUserReactions({
+              like: userReaction.reaction === 'like',
+              dislike: userReaction.reaction === 'dislike'
+            });
+          }
+        } catch (error) {
+          console.error('Failed to fetch user reactions', error);
+        }
+      };
+      fetchUserReactions();
+    }, [book]);
+
+    const handleReaction = async (reaction) => {
       const token = localStorage.getItem('token');
+      if (!token) return;
+
       const decodedToken = jwtDecode(token);
       const userID = decodedToken.ID;
 
-      const currentBook = books.find(book => book.bookID === bookID);
-      const currentLike = currentBook.like;
-      const currentDislike = currentBook.dislike;
+      try {
+        await axios.post(
+          `http://localhost:3333/books/${book}/${userID}/reaction_test`,
+          { reaction },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
 
-      const newReaction = (reaction === 'like' && currentLike) || (reaction === 'dislike' && currentDislike) ? null : reaction;
+        const likeResponse = await axios.get(`http://localhost:3333/books/${book}/like-count`);
+        setLikeCount(likeResponse.data.likeCount);
 
-      await axios.post(
-        `http://localhost:3333/books/${bookID}/${userID}/reaction_test`,
-        { reaction: newReaction },
-        {
-          headers: { Authorization: token }
-        }
-      );
+        setUserReactions(prev => ({
+          like: reaction === 'like' ? !prev.like : false,
+          dislike: reaction === 'dislike' ? !prev.dislike : false
+        }));
+      } catch (error) {
+        console.error('Error handling reaction:', error);
+      }
+    };
 
-      setBooks(prevBooks =>
-        prevBooks.map(book =>
-          book.bookID === bookID
-            ? {
-              ...book,
-              like: newReaction === 'like',
-              dislike: newReaction === 'dislike'
-            }
-            : book
-        )
-      );
-
-      // Save button state to localStorage
-      const savedLikes = localStorage.getItem('bookLikes');
-      const likesObject = savedLikes ? JSON.parse(savedLikes) : {};
-      likesObject[bookID] = { like: newReaction === 'like', dislike: newReaction === 'dislike' };
-      localStorage.setItem('bookLikes', JSON.stringify(likesObject));
-
-      console.log('Saved to localStorage:', localStorage.getItem('bookLikes')); // Debug log
-
-    } catch (error) {
-      console.error('Error handling reaction:', error);
-    }
+    return (
+      <div>
+        <Button
+          onClick={() => handleReaction(userReactions.like ? null : 'like')}
+          style={{ color: userReactions.like ? 'blue' : 'inherit' }}
+        >
+          <ThumbUpIcon /> Like [{likeCount}]
+        </Button>
+        <Button
+          onClick={() => handleReaction(userReactions.dislike ? null : 'dislike')}
+          style={{ color: userReactions.dislike ? 'red' : 'inherit' }}
+        >
+          <ThumbDownAltIcon /> Dislike
+        </Button>
+      </div>
+    );
   };
-
-  useEffect(() => {
-    const savedLikes = localStorage.getItem('bookLikes');
-    if (savedLikes) {
-      const parsedLikes = JSON.parse(savedLikes);
-      setBooks(prevBooks =>
-        prevBooks.map(book => ({
-          ...book,
-          like: parsedLikes[book.bookID]?.like || false,
-          dislike: parsedLikes[book.bookID]?.dislike || false
-        }))
-      );
-      console.log('Loaded from localStorage:', parsedLikes); // Debug log
-    }
-
-    fetchBooks(); // Fetch books to load book data
-  }, [fetchBooks]);
-
-
-
-
-  const [isActive, setIsActive] = useState(false);
-
-  const handleButtonClick = () => {
-    setIsActive(prevState => !prevState);
-  };
-
 
   const Favorite_Button = ({ book }) => {
     const [isFavorited, setIsFavorited] = useState(false);
-  
+    const [isLoading, setIsLoading] = useState(false);
+
     useEffect(() => {
       const checkFavoriteStatus = async () => {
         try {
           const token = localStorage.getItem('token');
-          if (!token) {
-            console.error('No token found');
-            return;
-          }
+          if (!token) return;
+
           const decodedToken = jwtDecode(token);
           const userID = decodedToken.ID;
-          const response = await axios.get(`/api/favorites/${userID}`, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+
+          const response = await axios.get(`http://localhost:3333/api/favorites/${userID}`, {
+            headers: { Authorization: `Bearer ${token}` }
           });
           const favorites = response.data;
-          setIsFavorited(favorites.some(favorite => favorite.bookID === book.bookID));
+          setIsFavorited(favorites.some(favorite => favorite.bookID === book));
         } catch (error) {
           console.error('Failed to fetch favorite status', error);
         }
       };
       checkFavoriteStatus();
-    }, [book.bookID]);
-  
+    }, [book]);
+
     const toggleFavorite = async () => {
       const token = localStorage.getItem('token');
-  
-      if (!token) {
-        console.error('No token found');
-        return;
-      }
-  
+      if (!token) return;
+
       const decodedToken = jwtDecode(token);
       const userID = decodedToken.ID;
-  
+
+      setIsLoading(true);
+
       try {
         if (isFavorited) {
-          // Remove from favorites
+          console.log(userID,book);
           await axios.delete('http://localhost:3333/api/favorite', {
             data: { userID, book },
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+            headers: { Authorization: `Bearer ${token}` }
           });
         } else {
-          // Add to favorites
-          await axios.post('http://localhost:3333/api/favorite', {
-            userID,
-            book,
-          }, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            }
+          await axios.post(`http://localhost:3333/api/favorite/${book}`, { userID }, {
+            headers: { Authorization: `Bearer ${token}` }
           });
         }
         setIsFavorited(!isFavorited);
       } catch (error) {
         console.error('Failed to update favorite status:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
-  
+
     return (
       <Button
         variant="contained"
-        color={isFavorited ? "secondary" : "primary"}
-        startIcon={<AddCircleIcon />}
+        style={{ backgroundColor: isFavorited ? 'orange' : '#2196F3', color: 'white' }}
         onClick={toggleFavorite}
+        disabled={isLoading}
       >
-        {isFavorited ? 'Remove from Favorites' : 'Add to Favorites'}
+        {isLoading ? <CircularProgress size={24} /> : (isFavorited ? 'Remove from Favorites' : 'Add to Favorites')}
       </Button>
     );
   };
 
+  const itemsPerPage = 6;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const indexOfLastBook = currentPage * itemsPerPage;
+  const indexOfFirstBook = indexOfLastBook - itemsPerPage;
+  const currentBooks = filteredBooks.slice(indexOfFirstBook, indexOfLastBook);
+
+  const totalPages = Math.ceil(filteredBooks.length / itemsPerPage);
+
+  const handlePageChange = (event, value) => {
+    setCurrentPage(value);
+  };
+
+  const categories = ['All', 'นิยาย', 'การ์ตูน', 'วรรณกรรม', 'นิทาน'];
+
+  
 
 
-
-    return (
-      <Container sx={{ py: 8 }} maxWidth="md">
-        <Grid container spacing={4}>
-          {books.map((book) => (
-            <Grid item key={book.bookID} xs={12} sm={6} md={4}>
-              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', border: '5px solid #FF0000' }}>
-                <CardMedia
-                  component="div"
-                  sx={{ pt: '0%' }}
-                >
-                  <img
-                    alt={book.name}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    src={book.cover_image}
-                  />
-                </CardMedia>
-                <Avatar
-                  src={book.profile ? `/${book.profile}` : ''}
-                  sx={{ width: 70, height: 70, mb: 2, mx: 'auto', marginTop: '15px' }}
-                >
-                  H
-                </Avatar>
-
-                <CardContent sx={{ flexGrow: 1 }}>
-                  <Favorite_Button  book={book.bookID}></Favorite_Button>
-                  <Typography gutterBottom variant="h5" component="h2" sx={{ fontWeight: 'bold' }}>
-                    {book.name}
-                  </Typography>
-                  <Typography sx={{ fontWeight: 'bold' }}>
-                    Author: {book.write}
-                  </Typography>
-                  <Typography>
-                    Publisher: {book.publish}
-                  </Typography>
-                  <Typography>
-                    Synopsis: {book.detail}...
-                  </Typography>
-                </CardContent>
-                <CardActions>
-                  <Button
-                    size="small"
-                    onClick={() => displayPdfFromId(book.PDF)}
-                    style={{ color: 'white', backgroundColor: '#2196F3' }}
-                  >
-                    Read
-                  </Button>
-                  <Button
-                    size="small"
-                    onClick={() => handleDelete(book.bookID)}
-                    style={{ color: 'white', backgroundColor: 'red' }}
-                  >
-                    DELETE
-                  </Button>
-                </CardActions>
-                <CardActions>
-                  <Button onClick={() => handleReaction(book.bookID, 'like')} style={{ color: book.like ? 'blue' : 'inherit', backgroundColor: book.like ? '#2196F3' : 'inherit' }}>
-                    <ThumbUpIcon /> Like
-                  </Button>
-                  <Button onClick={() => handleReaction(book.bookID, 'dislike')} style={{ color: book.dislike ? 'blue' : 'inherit', backgroundColor: book.dislike ? '#FF0000' : 'inherit' }}>
-                    <ThumbDownAltIcon /> Dislike
-                  </Button>
-                </CardActions>
-              </Card>
-            </Grid>
+  return (
+    <Container sx={{ py: 8 }} maxWidth="md">
+      <TextField
+        label="Search Books"
+        variant="outlined"
+        fullWidth
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        sx={{ mb: 4 }}
+      />
+      <FormControl fullWidth sx={{ mb: 4 }}>
+        <InputLabel>Category</InputLabel>
+        <Select
+          value={selectedCategory}
+          onChange={(e) => setSelectedCategory(e.target.value)}
+          label="Category"
+        >
+          {categories.map((category) => (
+            <MenuItem key={category} value={category}>
+              {category}
+            </MenuItem>
           ))}
-        </Grid>
-      </Container>
-    );
-  }
+        </Select>
+      </FormControl>
+      <Grid container spacing={4}>
+        {currentBooks.map((book) => (
+          <Grid item key={book.bookID} xs={12} sm={6} md={4}>
+            <Card sx={{
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              '&:hover': {
+                transform: 'scale(1.05)',
+                boxShadow: '0 6px 20px rgba(0, 0, 0, 0.15)',
+              },
+              transition: 'transform 0.3s, box-shadow 0.3s',
+            }}>
+              <CardMedia component="div" sx={{ pt: '0%' }}>
+                <img
+                  alt={book.name}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  src={book.cover_image}
+                />
+              </CardMedia>
+              <Avatar
+                src={book.profile ? `/${book.profile}` : ''}
+                sx={{ width: 70, height: 70, mb: 2, mx: 'auto', marginTop: '15px' }}
+              >
+                H
+              </Avatar>
+              <Box sx={{ textAlign:"center",}} >{book.First_name}</Box>
+              
+              <CardContent sx={{ flexGrow: 1 }}>
+                <Typography gutterBottom variant="h5" component="h2" sx={{ fontWeight: 'bold' }}>
+                  {book.name}
+                </Typography>
+                <Typography sx={{ fontWeight: 'bold' }}>
+                  Author: {book.write}
+                </Typography>
+                <Typography>
+                  Publisher: {book.publish}
+                </Typography>
+                <Typography>
+                  Synopsis: {book.detail}...
+                </Typography>
+              </CardContent>
+              <CardActions>
+                <Button
+                  size="small"
+                  onClick={() => displayPdfFromId(book.PDF)}
+                  sx={{ color: 'black', backgroundColor: '#2196F3' }}
+                >
+                  Read
+                </Button>
+                <Button
+                  size="small"
+                  onClick={() => handleDelete(book.bookID)}
+                  sx={{ color: 'black', backgroundColor: 'red' }}
+                >
+                  DELETE
+                </Button>
+              </CardActions>
+              <CardActions>
+                <BookReactions book={book.bookID} />
+                <Favorite_Button book={book.bookID} />
+              </CardActions>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+      <Box sx={{ mt: 4 }}>
+        <Stack spacing={2} alignItems="center">
+          <Pagination
+            count={totalPages}
+            page={currentPage}
+            onChange={handlePageChange}
+            renderItem={(item) => (
+              <PaginationItem
+                slots={{ previous: ArrowBackIcon, next: ArrowForwardIcon }}
+                {...item}
+              />
+            )}
+          />
+        </Stack>
+      </Box>
+    </Container>
+  );
+};
 
-  export default Book;
+export default Book;

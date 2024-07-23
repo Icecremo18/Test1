@@ -10,7 +10,7 @@ import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import axios from 'axios';
-
+import { Box } from '@mui/material';
 const Editmybook = ({ open, onClose, book }) => {
     const [formData, setFormData] = useState({
         name: '',
@@ -54,6 +54,7 @@ const Editmybook = ({ open, onClose, book }) => {
 
     return (
         <Dialog open={open} onClose={onClose}>
+            <Box sx={{backgroundColor: '#f5f5dc'}}  >
             <DialogTitle>Edit Book</DialogTitle>
             <DialogContent>
                 <TextField
@@ -111,6 +112,7 @@ const Editmybook = ({ open, onClose, book }) => {
                     Save
                 </Button>
             </DialogActions>
+            </Box>
         </Dialog>
     );
 };

@@ -36,12 +36,12 @@ export default function SignUp() {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const jsonData = {
-        fname: data.get('firstName'),
-        lname: data.get('lastName'),   
-        username: data.get('userName'),
-        password: data.get('password'),
-        email_address: data.get('email'),
-        phone: data.get('phone'),
+      fname: data.get('firstName'),
+      lname: data.get('lastName'),   
+      username: data.get('userName'),
+      password: data.get('password'),
+      email_address: data.get('email'),
+      phone: data.get('phone'),
     };
 
     try {
@@ -54,8 +54,9 @@ export default function SignUp() {
 
       if (response.data.status === 'ok') {
         localStorage.setItem('token', response.data.token);
-        window.location = '/login';
         Swal.fire('Success', 'Register success', 'success');
+        window.location = '/login';
+        
       } else {
         Swal.fire('Error', 'Register failed: email ซ้ำ', 'error');
       }
@@ -65,27 +66,44 @@ export default function SignUp() {
     }
   };
 
+  const handlePhoneInput = (event) => {
+    const input = event.target.value;
+    event.target.value = input.replace(/[^0-9]/g, '');
+  };
+
   return (
-    <ThemeProvider theme={defaultTheme} sx={{ backgroundImage: `url(${backgroundImage})` }}>
-      <Container component="main" maxWidth="xs">
+    <ThemeProvider theme={defaultTheme}>
+      <Container 
+        component="main" 
+        maxWidth="xs" 
+        sx={{ 
+          backgroundImage: `url(${backgroundImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         <CssBaseline />
         <Box
           sx={{
-            marginTop: 8,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            backgroundColor: '#CCFFFF',
+            padding: 4,
+            backgroundColor: 'rgba(255, 255, 255, 0.9)',
             borderRadius: '20px',
+            boxShadow: '0 0 10px rgba(0, 0, 0, 0.2)',
+            backdropFilter: 'blur(10px)',
           }}
         >
           <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
             <LockOutlinedIcon />
           </Avatar>
-          <Typography component="h1" variant="h5">
+          <Typography component="h1" variant="h5" sx={{ marginBottom: 2 }}>
             Register
           </Typography>
-          <Box component="form" noValidate onSubmit={handleSubmit} sx={{ mt: 3 }}>
+          <Box component="form" noValidate onSubmit={handleSubmit} sx={{ mt: 1 }}>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
                 <TextField
@@ -148,6 +166,8 @@ export default function SignUp() {
                   label="Phone"
                   name="phone"
                   autoComplete="phone"
+                  inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
+                  onInput={handlePhoneInput}
                 />
               </Grid>
               <Grid item xs={12}>
@@ -174,7 +194,7 @@ export default function SignUp() {
             </Grid>
           </Box>
         </Box>
-        <Copyright sx={{ mt: 5 }} />
+       
       </Container>
     </ThemeProvider>
   );

@@ -9,6 +9,8 @@ import axios from 'axios';
 import Avatar from "@mui/material/Avatar";
 import { styled } from '@mui/material/styles';
 import AccountBoxIcon from '@mui/icons-material/AccountBox';
+import { Box } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 
 function EditProfilePopup({ open, onClose, userId }) {
     const [user, setUser] = useState({ First_name: '', Last_name: '', email: '', phone: '' });
@@ -94,70 +96,77 @@ function EditProfilePopup({ open, onClose, userId }) {
         }
     };
 
-
-    
+    const navigate = useNavigate();
+    const handleChangePasswordClick = () => {
+        navigate('/reset-password-request'); // Navigate to the reset password page
+    };
 
     return (
         <Dialog open={open} onClose={onClose}>
-            <DialogTitle>Edit Profile</DialogTitle>
-            <DialogContent sx={{ textAlign: 'center' }}>
-                <Avatar
-                    alt="Profile Image"
-                    src={profile ? URL.createObjectURL(profile) : currentProfile ? `/${currentProfile.replace('C:\\Users\\Cite\\Downloads\\โปรเจ็คท้าย\\myapp\\react-login\\public\\', '')}` : ''}
-                    sx={{ width: 100, height: 100, mb: 2, mx: 'auto'    }}
-                >
-                    H
-                </Avatar>
-                <Button
-                    component="label"
-                    variant="contained"
-                    startIcon={<AccountBoxIcon />}
-                    onChange={handleAvatarChange}
-                >
-                    Upload Profile
-                    <VisuallyHiddenInput type="file" accept="image/*" />
-                </Button>
-                <TextField
-                    autoFocus
-                    margin="dense"
-                    label="First Name"
-                    type="text"
-                    fullWidth
-                    value={user.First_name}
-                    onChange={(e) => setUser({ ...user, First_name: e.target.value })}
-                />
-                <TextField
-                    margin="dense"
-                    label="Last Name"
-                    type="text"
-                    fullWidth
-                    value={user.Last_name}
-                    onChange={(e) => setUser({ ...user, Last_name: e.target.value })}
-                />
-                <TextField
-                    margin="dense"
-                    label="Email"
-                    type="email"
-                    fullWidth
-                    value={user.email}
-                    onChange={(e) => setUser({ ...user, email: e.target.value })}
-                />
-                <TextField
-                    margin="dense"
-                    label="Phone"
-                    type="text"
-                    fullWidth
-                    value={user.phone}
-                    onChange={(e) => {
-                        const phoneNumber = e.target.value.replace(/\D/g, '').slice(0, 10);
-                        setUser({ ...user, phone: phoneNumber });
-                    }}
-                />
-            </DialogContent>
-            <DialogActions>
-                <Button onClick={onClose}>Cancel</Button>
-                <Button onClick={handleSave}>Save</Button>
-            </DialogActions>
+            <Box sx={{ backgroundColor:'#f5f5dc' }}>
+                <DialogTitle>Edit Profile</DialogTitle>
+                <DialogContent sx={{ textAlign: 'center' }}>
+                    <Avatar
+                        alt="Profile Image"
+                        src={profile ? URL.createObjectURL(profile) : currentProfile ? `/${currentProfile.replace('C:\\Users\\Cite\\Downloads\\โปรเจ็คท้าย\\myapp\\react-login\\public\\', '')}` : ''}
+                        sx={{ width: 100, height: 100, mb: 2, mx: 'auto' }}
+                    >
+                        H
+                    </Avatar>
+                    <Button
+                        component="label"
+                        variant="contained"
+                        startIcon={<AccountBoxIcon />}
+                        onChange={handleAvatarChange}
+                    >
+                        Upload Profile
+                        <VisuallyHiddenInput type="file" accept="image/*" />
+                    </Button>
+                    <TextField
+                        autoFocus
+                        margin="dense"
+                        label="First Name"
+                        type="text"
+                        fullWidth
+                        value={user.First_name}
+                        onChange={(e) => setUser({ ...user, First_name: e.target.value })}
+                    />
+                    <TextField
+                        margin="dense"
+                        label="Last Name"
+                        type="text"
+                        fullWidth
+                        value={user.Last_name}
+                        onChange={(e) => setUser({ ...user, Last_name: e.target.value })}
+                    />
+                    <TextField
+                        margin="dense"
+                        label="Email"
+                        type="email"
+                        fullWidth
+                        value={user.email}
+                        onChange={(e) => setUser({ ...user, email: e.target.value })}
+                    />
+                    <TextField
+                        margin="dense"
+                        label="Phone"
+                        type="text"
+                        fullWidth
+                        value={user.phone}
+                        onChange={(e) => {
+                            const phoneNumber = e.target.value.replace(/\D/g, '').slice(0, 10);
+                            setUser({ ...user, phone: phoneNumber });
+                        }}
+                    />
+                    <Button onClick={handleChangePasswordClick} sx={{ mt: 2 }}>
+                        Change Password
+                    </Button>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={onClose}>Cancel</Button>
+                    <Button onClick={handleSave}>Save</Button>
+                </DialogActions>
+            </Box>
         </Dialog>
     );
 }

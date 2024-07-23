@@ -1,27 +1,31 @@
-// Album.js
-
 import React, { useEffect, useState } from "react";
-import AppBar from "@mui/material/AppBar";
-import Button from "@mui/material/Button";
-import CssBaseline from "@mui/material/CssBaseline";
-import logo from "./logo1.jpg";
-import Stack from "@mui/material/Stack";
-import Box from "@mui/material/Box";
-import Toolbar from "@mui/material/Toolbar";
-import Typography from "@mui/material/Typography";
-import Container from "@mui/material/Container";
-import Link from "@mui/material/Link";
-import { createTheme, ThemeProvider } from "@mui/material/styles";
+import {
+  AppBar,
+  Avatar,
+  Box,
+  Button,
+  Container,
+  CssBaseline,
+  Link,
+  Stack,
+  Toolbar,
+  Typography,
+  createTheme,
+  ThemeProvider,
+  Grid,
+} from "@mui/material";
 import AddTwoToneIcon from "@mui/icons-material/AddTwoTone";
+import logo from "./logo1.jpg";
+import backgroundImage from "./assets/images/photo-1521587760476-6c12a4b040da.avif";
 import Book from "./book";
 import EditMember from "./EditMember";
-import { jwtDecode } from "jwt-decode";
-import MyBookPopup from './MyBookPopup';
-import backgroundImage from "./assets/images/photo-1521587760476-6c12a4b040da.avif";
-import Avatar from "@mui/material/Avatar";
 import EditProfilePopup from "./EditProfilePopup";
-import axios from "axios";
+import MyBookPopup from "./MyBookPopup";
 import Favorite from "./Favorite";
+import axios from "axios";
+import { jwtDecode } from "jwt-decode";
+
+import { useNavigate } from 'react-router-dom';
 
 function Copyright() {
   return (
@@ -34,36 +38,94 @@ function Copyright() {
       {"."}
     </Typography>
   );
-  
 }
+
 const defaultTheme = createTheme();
 
 export default function Album() {
   const [openProfile, setOpenProfile] = useState(false);
+  const [name, setName] = useState("");
+  const [role, setRole] = useState("");
+  const [userId, setUserId] = useState(null);
+  const [isEditMemberOpen, setEditMemberOpen] = useState(false);
+  const [openMyBook, setOpenMyBook] = useState(false);
+  const [pathProfile, setPathProfile] = useState("");
+
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    fetch("http://localhost:3333/authen", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + token,
-      },
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        if (data.status === "ok") {
-          // alert('authen success')
-        } else {
-          alert("โปรดเข้าสู้ระบบอีกครั้ง");
-          localStorage.removeItem("token");
-          window.location = "/login";
-        }
+    if (token) {
+      fetch("http://localhost:3333/authen", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + token,
+        },
       })
-      .catch((error) => {
-        console.error("Error:", error);
-      });
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.status === "ok") {
+            const decodedToken = jwtDecode(token);
+            setName(decodedToken.First_name);
+            setRole(decodedToken.Role);
+            setUserId(decodedToken.ID);
+          } else {
+            alert("โปรดเข้าสู้ระบบอีกครั้ง");
+            localStorage.removeItem("token");
+            window.location = "/login";
+          }
+        })
+        .catch((error) => {
+          console.error("Error:", error);
+        });
+    }
   }, []);
+
+  useEffect(() => {
+    if (userId) {
+      axios
+        .get(`http://localhost:3333/get_img/${userId}`)
+        .then((response) => {
+          setPathProfile(response.data);
+        })
+        .catch((error) => {
+          console.error("Error fetching image path:", error);
+        });
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const response = await axios.get(`http://localhost:3333/usersprofile/${userId}`);
+        setUser(response.data);
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+        setError(error.response?.data?.message || 'An error occurred');
+      } finally {
+        setLoading(false);
+      }
+    };
+  
+    if (userId) {
+      fetchUserProfile();
+    }
+  }, [userId]);
+
+
+  const fetchUserProfile = async () => {
+    console.log(userId);
+    if (!userId) return; // Ensure userId is defined
+    try {
+      const response = await axios.get(`http://localhost:3333/usersprofile/${userId}`);
+      setUser(response.data);
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
 
   const handleLogout = (event) => {
     event.preventDefault();
@@ -75,47 +137,17 @@ export default function Album() {
     window.location = "/addbook";
   };
 
-  const handleOpenpopup = () => {
-    // เปิด Popup
-
-    if (Role === "admin") {
+  const handleOpenPopup = () => {
+    if (role === "admin") {
       setEditMemberOpen(true);
     } else {
       alert("คุณไม่ได้รับอนุญาต");
     }
   };
 
-  const handleclosepopup = () => {
-    // เปิด Popup
+  const handleClosePopup = () => {
     setEditMemberOpen(false);
   };
-
-  const [name, setname] = useState("");
-  const [Role, setRole] = useState("");
-
-  useEffect(() => {
-    // ดึง token จาก localStorage
-    const token = localStorage.getItem("token"); // แทน 'your_token_key' ด้วยคีย์ที่คุณใช้เก็บ token
-    console.log(token);
-
-    if (token) {
-      // Decode token เพื่อดึงข้อมูล
-      const decodedToken = jwtDecode(token);
-      console.log(decodedToken);
-
-      // ดึง username จาก decodedToken
-     
-      const Role = decodedToken.Role;
-      const ID = decodedToken.ID;
-      const name =decodedToken.First_name;
-
-      // เซ็ต state เพื่อแสดงผลบนหน้าเว็บ
-      setname(name);
-      setRole(Role);
-      setUserId(ID);
-    }
-  }, []);
-  const [isEditMemberOpen, setEditMemberOpen] = useState(false);
 
   const handleAvatarClick = () => {
     setOpenProfile(true);
@@ -123,98 +155,116 @@ export default function Album() {
 
   const handleProfileClose = () => {
     setOpenProfile(false);
+    
+    fetchUserProfile();
+    
   };
 
-  const [userId, setUserId] = useState(null);
-  const [openmybook, setOpenmybook] = useState(false);
-  
-  const handleOpenmybook = () => {
-    setOpenmybook(true);
+  const handleOpenMyBook = () => {
+    setOpenMyBook(true);
   };
 
-  const handleclosemybook = () => {
-    setOpenmybook(false);
+  const handleCloseMyBook = () => {
+    setOpenMyBook(false);
   };
 
-const [pathprofile,setpathprofile]= useState("");
-useEffect(() => {
-  // Example API call to fetch image path based on userId
-  axios.get(`http://localhost:3333/get_img/${userId}`)
-    .then(response => {
-      setpathprofile(response.data); 
-      // Assuming response.data contains the path to the image
-      
-    })
-    .catch(error => {
-      console.error('Error fetching image path:', error);
-      // Handle error state if needed
-    });
-}, [userId]);
-console.log(userId);
+  const navigate = useNavigate();
+  const handleLinkClick = () => {
+    navigate('/reset-password-request'); // Navigate to the login page
+  };
 
-console.log(pathprofile);
-
-  // },[userId])
   return (
     <ThemeProvider theme={defaultTheme}>
-      <Box
-        sx={{
-          bgcolor: "#FF7F50", // สีเขียว
-          pt: 8,
-          pb: 6,
-        }}
-      >
-        <Container maxWidth="sm">
-          <Typography
-            component="h1"
-            variant="h2"
-            align="center"
-            color="text.primary"
-            gutterBottom
-            // color="white"
-            height="167px"
+      <CssBaseline />
+      <Box sx={{ bgcolor: "#FF7F50", pt: 8, pb: 6 }}>
+        <Container maxWidth="lg">
+          <Box
+            sx={{
+              backgroundColor: "#FF7043",
+              padding: "20px",
+              display: "flex",
+              flexDirection: "column",
+              textAlign: "center",
+              alignItems: "center",
+            }}
           >
-            เว็บอ่าน E BOOK ฟรี
-            <Typography
-              align="left"
+            <Box
               sx={{
-                padding: 1,
-                fontSize: "1rem",
-                marginLeft: "-680px",
-                marginTop: "-145px",
+                display: "flex",
+                alignItems: "center",
+                flexDirection: { xs: "column", md: "row" },
               }}
             >
               <img
                 src={logo}
                 alt="Logo"
-                style={{ height: "300px", marginRight: "10px" }}
+                style={{
+                  height: "100px",
+                  marginBottom: { xs: "20px", md: "0" },
+                }}
               />
-            </Typography>
-          </Typography>
-          {/* ... ส่วนอื่น ๆ ... */}
+              <Typography
+                component="h1"
+                variant="h4"
+                sx={{
+                  color: "white",
+                  marginLeft: { md: "20px" },
+                  fontSize: { xs: "1.5rem", md: "2.5rem" },
+                }}
+              >
+                เว็บอ่าน E BOOK ฟรี
+              </Typography>
+            </Box>
+          </Box>
         </Container>
       </Box>
-      <CssBaseline />
-      <AppBar position="relative">
+      <AppBar position="sticky">
         <Toolbar
           sx={{
-            bgcolor: "#FFA500 ",
+            bgcolor: "#FFA500",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-
           }}
         >
-         <Avatar onClick={handleAvatarClick} src={pathprofile ? `/${pathprofile.profile.replace('C:\\Users\\Cite\\Downloads\\โปรเจ็คท้าย\\myapp\\react-login\\public\\', '')}` : ''}
-         sx={{ width: 70, height: 70, mb: 2, mx: 'flex' ,marginTop : '15px' }} >
-            H
-          </Avatar>
-          <Typography
-            variant="h6"
-            color="inherit"
-            noWrap
-            sx={{ display: "flex", alignItems: "center" }}
-          >
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            <Avatar
+              onClick={handleAvatarClick}
+              src={
+                pathProfile
+                  ? `/${pathProfile.profile.replace(
+                      "C:\\Users\\Cite\\Downloads\\โปรเจ็คท้าย\\myapp\\react-login\\public\\",
+                      ""
+                    )}`
+                  : ""
+              }
+              sx={{
+                width: 70,
+                height: 70,
+                mb: 2,
+                mx: "flex",
+                marginTop: "15px",
+                transition: "transform 0.3s ease-in-out",
+                "&:hover": {
+                  transform: "scale(1.2)",
+                },
+              }}
+            >
+              H
+            </Avatar>
+
+            {user ? (
+              <Typography sx={{ fontWeight: "bold", fontSize: "1.5rem" }}>
+                {user.First_name} {role}
+              </Typography>
+            ) : (
+              <Typography sx={{ fontWeight: "bold", fontSize: "1.5rem" }}>
+                Loading...
+              </Typography>
+            )}
+            
+          </Box>
+          <Box sx={{ display: "flex", alignItems: "center" }}>
             <Button
               variant="contained"
               color="error"
@@ -223,34 +273,38 @@ console.log(pathprofile);
             >
               addbook <AddTwoToneIcon />
             </Button>
-            {Role === "admin" && (
+            {role === "admin" && (
               <Button
                 variant="contained"
                 color="error"
-                onClick={handleOpenpopup}
-                sx={{ mr: 1, fontSize: "1rem" }} // เพิ่ม mr เพื่อทำให้มีระยะห่างกับปุ่มถัดไป
+                onClick={handleOpenPopup}
+                sx={{ mr: 1, fontSize: "1rem" }}
               >
                 Edit member
               </Button>
             )}
-
-            <Button variant="contained" color="error" sx={{ fontSize: "1rem" }}  onClick={handleOpenmybook}  >
+            <Button
+              variant="contained"
+              color="error"
+              onClick={handleOpenMyBook}
+              sx={{ fontSize: "1rem" }}
+            >
               MY BOOK <AddTwoToneIcon />
             </Button>
-          </Typography>
-
+          </Box>
           <Typography
             variant="h6"
             sx={{ fontWeight: "bold", fontStyle: "italic", fontSize: "1.5rem" }}
           >
             E BOOK
-
-            <Favorite></Favorite>
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              <Typography>Favorite Book</Typography>
+              <Favorite />
+            </Box>
           </Typography>
         </Toolbar>
       </AppBar>
       <main>
-        {/* Hero unit */}
         <Box
           sx={{
             bgcolor: "background.paper",
@@ -280,7 +334,7 @@ console.log(pathprofile);
               color="text.secondary"
               paragraph
             >
-              ยินดีต้อนรับคุณ
+              ยินดีต้อนรับ
               <Typography
                 variant="h5"
                 align="center"
@@ -288,7 +342,7 @@ console.log(pathprofile);
                 paragraph
                 sx={{ fontWeight: "bold" }}
               >
-                {name}  {Role}
+             
               </Typography>{" "}
               นี้คือเว็บที่ออกแบบมาเพื่อคนชอบอ่านหนังสือบนเว็บไซต์ E BOOK
               ใช้ฟรีไม่เสียตัง
@@ -305,13 +359,16 @@ console.log(pathprofile);
             </Stack>
           </Container>
         </Box>
-        <Container sx={{ py: 8 }} maxWidth="md">
-          {/* End hero unit */}
-          <Book />
-        </Container>
+        <Box sx={{ backgroundColor: "#f5f5dc" }}>
+          <Container sx={{ py: 8 }} maxWidth="md">
+            <Book />
+          </Container>
+        </Box>
       </main>
-      {/* Footer */}
-      <Box sx={{ bgcolor: "background.paper", p: 6 }} component="footer">
+      <Box
+        sx={{ bgcolor: "background.paper", p: 6, backgroundColor: "#F4A460" }}
+        component="footer"
+      >
         <Typography variant="h6" align="center" gutterBottom>
           Footer
         </Typography>
@@ -325,17 +382,13 @@ console.log(pathprofile);
         </Typography>
         <Copyright />
       </Box>
-      {/* End footer */}
-      <EditMember open={isEditMemberOpen} onClose={handleclosepopup} />
+      <EditMember open={isEditMemberOpen} onClose={handleClosePopup} />
       <EditProfilePopup
         open={openProfile}
         onClose={handleProfileClose}
         userId={userId}
       />
-
-      <MyBookPopup open={openmybook} handleClose={handleclosemybook} />
+      <MyBookPopup open={openMyBook} handleClose={handleCloseMyBook} />
     </ThemeProvider>
   );
 }
-
-
