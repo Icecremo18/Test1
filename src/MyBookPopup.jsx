@@ -145,6 +145,7 @@ const MyBookPopup = ({ open, handleClose }) => {
                                     <TableCell>{book.write}</TableCell>
                                     <TableCell>{book.publish}</TableCell>
                                     <TableCell>
+                                        <Button>READ</Button>
                                         <Button onClick={() => handleEditClick(book)}>Edit</Button>
                                         <Button onClick={handleDelete(book.bookID)}>Delete</Button>
                                     </TableCell>

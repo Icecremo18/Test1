@@ -271,7 +271,7 @@ export default function Album() {
               onClick={handleOpen}
               sx={{ mr: 1, fontSize: "1rem" }}
             >
-              addbook <AddTwoToneIcon />
+              add book <AddTwoToneIcon />
             </Button>
             {role === "admin" && (
               <Button

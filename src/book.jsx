@@ -27,6 +27,7 @@ import PaginationItem from '@mui/material/PaginationItem';
 import Stack from '@mui/material/Stack';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import ReviewPopup from './Revive';
 
 function Book() {
   const [books, setBooks] = useState([]);
@@ -75,7 +76,7 @@ function Book() {
     setFilteredBooks(results);
     setCurrentPage(1); // Reset to first page on search or category change
   }, [searchTerm, selectedCategory, books]);
-  
+
 
   const handleDelete = useCallback(async (id) => {
     const token = localStorage.getItem("token");
@@ -260,7 +261,7 @@ function Book() {
 
       try {
         if (isFavorited) {
-          console.log(userID,book);
+          console.log(userID, book);
           await axios.delete('http://localhost:3333/api/favorite', {
             data: { userID, book },
             headers: { Authorization: `Bearer ${token}` }
@@ -305,8 +306,25 @@ function Book() {
 
   const categories = ['All', 'นิยาย', 'การ์ตูน', 'วรรณกรรม', 'นิทาน'];
 
-  
+  const [open, setOpen] = useState(false);
 
+  const handleOpen = () => setOpen(true);
+  const handleClose = () => setOpen(false);
+
+
+  console.log();
+
+  const [openReviewPopup, setOpenReviewPopup] = useState(false);
+  const [selectedBook, setSelectedBook] = useState(null);
+  const handleOpenReviewPopup = (bookID) => {
+    setSelectedBook(bookID);
+    setOpenReviewPopup(true);
+  };
+
+  const handleCloseReviewPopup = () => {
+    setSelectedBook(null);
+    setOpenReviewPopup(false);
+  };
 
   return (
     <Container sx={{ py: 8 }} maxWidth="md">
@@ -358,8 +376,8 @@ function Book() {
               >
                 H
               </Avatar>
-              <Box sx={{ textAlign:"center",}} >{book.First_name}</Box>
-              
+              <Box sx={{ textAlign: "center", }} >{book.First_name}</Box>
+
               <CardContent sx={{ flexGrow: 1 }}>
                 <Typography gutterBottom variant="h5" component="h2" sx={{ fontWeight: 'bold' }}>
                   {book.name}
@@ -389,12 +407,27 @@ function Book() {
                 >
                   DELETE
                 </Button>
+
+
+                <Button
+                  size="small"
+                  sx={{ color: 'black', backgroundColor: '#7CFC00' }}
+                  onClick={() => handleOpenReviewPopup(book.bookID)}
+                >
+                  REVIEW
+                </Button>
+                
+
               </CardActions>
               <CardActions>
                 <BookReactions book={book.bookID} />
                 <Favorite_Button book={book.bookID} />
+
+
+
               </CardActions>
             </Card>
+            <ReviewPopup open={open} handleClose={handleClose} book={book.bookID} />
           </Grid>
         ))}
       </Grid>
@@ -413,6 +446,13 @@ function Book() {
           />
         </Stack>
       </Box>
+      {openReviewPopup && selectedBook && (
+        <ReviewPopup
+          open={openReviewPopup}
+          handleClose={handleCloseReviewPopup}
+          book={selectedBook}
+        />
+      )}
     </Container>
   );
 };

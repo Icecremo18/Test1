@@ -24,7 +24,7 @@ const OTPInput = () => {
 
       if (response.data.message === 'Password updated successfully') {
         setSuccess('Password updated successfully');
-        setTimeout(() => navigate('/login'), 2000); // Redirect to login page after 2 seconds
+        setTimeout(() => navigate('/login'), 1000); // Redirect to login page after 2 seconds
       }
     } catch (error) {
       setError(error.response.data.error || 'Error verifying OTP');
@@ -32,7 +32,9 @@ const OTPInput = () => {
   };
 
   return (
-    <Container component="main" maxWidth="xs">
+    
+    <Container component="main" maxWidth="xs"   >
+     
       <Box
         sx={{
           display: 'flex',
@@ -43,6 +45,8 @@ const OTPInput = () => {
           border: '1px solid #ddd',
           borderRadius: 1,
           boxShadow: 3,
+          backgroundColor: "#FF7F50",
+          
         }}
       >
         <Typography component="h1" variant="h5">
@@ -59,6 +63,7 @@ const OTPInput = () => {
             autoFocus
             value={otp}
             onChange={(e) => setOtp(e.target.value)}
+            sx={{backgroundColor: "#ddd"}}
           />
           <TextField
             variant="outlined"
@@ -69,10 +74,11 @@ const OTPInput = () => {
             type="password"
             autoComplete="new-password"
             value={newPassword}
+            sx={{backgroundColor: "#ddd"}}
             onChange={(e) => setNewPassword(e.target.value)}
           />
           {error && (
-            <Typography color="error" variant="body2" sx={{ mt: 2 }}>
+            <Typography color="error" variant="body2" sx={{ mt: 2,color: "#000"}}> {error}
               {error}
             </Typography>
           )}
@@ -85,12 +91,13 @@ const OTPInput = () => {
             type="submit"
             fullWidth
             variant="contained"
-            sx={{ mt: 3, mb: 2 }}
+            sx={{ mt: 3, mb: 2,backgroundColor: "#ffeb3b",color:'black' }}
           >
             Submit
           </Button>
         </Box>
-      </Box>
+        </Box>
+      
     </Container>
   );
 };
