@@ -950,6 +950,112 @@ app.delete('/api/favorite', async (req, res) => {
 });
 
 
+app.post("/reviews", async (req, res) => {
+  const { bookId, review, userId } = req.body;
+
+  if (!bookId || !review || !userId) {
+    return res.status(400).json({ error: 'Please provide bookId, review, and userId' });
+  }
+
+  try {
+    const connection = await pool.getConnection();
+
+    const [result] = await connection.execute(
+      'INSERT INTO review (book_ID, user_ID, review) VALUES (?, ?, ?)',
+      [bookId, userId, review]
+    );
+
+    connection.release();
+
+    if (result.affectedRows === 1) {
+      res.status(200).json({ message: 'Review submitted successfully' });
+    } else {
+      res.status(500).json({ error: 'Failed to submit review' });
+    }
+  } catch (error) {
+    console.error('Error submitting review:', error);
+    res.status(500).json({ error: 'An error occurred' });
+  }
+});
+
+
+
+
+
+
+app.get("/reviews", async (req, res) => {
+  const { bookId } = req.query;
+
+  if (!bookId) {
+    return res.status(400).json({ error: 'Please provide bookId' });
+  }
+
+  try {
+    const connection = await pool.getConnection();
+
+    const [rows] = await connection.execute(
+      'SELECT review.*, users.First_name, users.profile FROM review JOIN users ON users.ID = review.user_ID WHERE book_ID = ?;',
+      [bookId]
+    );
+
+    connection.release();
+
+    res.status(200).json(rows);
+  } catch (error) {
+    console.error('Error fetching reviews:', error);
+    res.status(500).json({ error: 'An error occurred' });
+  }
+});
+
+
+app.get("/my_reviews/:userid/:book", async (req, res) => {
+  const  bookId  = req.params.book;
+  const userid = req.params.userid;
+
+  if (!bookId) {
+    return res.status(400).json({ error: 'Please provide bookId' });
+  }
+
+  try {
+    const connection = await pool.getConnection();
+
+    const [rows] = await connection.execute(
+      'SELECT review.*, users.First_name, users.profile FROM review JOIN users ON users.ID = review.user_ID WHERE book_ID = ? and users.ID = ? ;',
+      [bookId,userid]
+    );
+
+    connection.release();
+
+    res.status(200).json(rows);
+  } catch (error) {
+    console.error('Error fetching reviews:', error);
+    res.status(500).json({ error: 'An error occurred' });
+  }
+});
+
+
+
+// Endpoint สำหรับลบรีวิว
+app.delete('/reviews/:id',async (req, res) => {
+  const reviewId = req.params.id;
+  const connection = await pool.getConnection();
+  // SQL Query สำหรับลบรีวิว
+  const sql = 'DELETE FROM review WHERE Review_ID = ?';
+  connection.query(sql, [reviewId], (err, result) => {
+      if (err) {
+          console.error(err);
+          return res.status(500).json({ error: 'Internal server error' });
+      }
+
+      if (result.affectedRows > 0) {
+          res.status(200).json({ message: 'Review deleted successfully' });
+      } else {
+          res.status(404).json({ message: 'Review not found' });
+      }
+  });
+});
+
+
 
 
 app.get('/books/:bookID/like-count', async (req, res) => {
